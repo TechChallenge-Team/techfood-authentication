@@ -3,12 +3,15 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: us-east-1
+
 jobs:
   build-and-deploy-lambda:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
@@ -28,15 +31,61 @@ jobs:
         run: dotnet lambda package --configuration Release --project-location src/TechFood.Authentication/TechFood.Authentication.csproj --output-package bin/Release/TechFood.Authentication.zip
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: "us-east-1"
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy Lambda function
+      - name: Download Terraform outputs from S3
+        # The CI expects the terraform repo to upload outputs.json into this bucket
+        # Set secret TF_OUTPUTS_BUCKET to the bucket name (e.g. techfood-bucket1)
         run: |
-          dotnet lambda deploy-function TechFoodAuthenticationLambda \
-            --region us-east-1 \
-            --package bin/Release/TechFood.Authentication.zip
+          if [ -z "${{ secrets.TF_OUTPUTS_BUCKET }}" ]; then
+            echo "ERROR: secrets.TF_OUTPUTS_BUCKET not set"; exit 1
+          fi
+          aws s3 cp s3://${{ secrets.TF_OUTPUTS_BUCKET }}/terraform/outputs.json outputs.json
+
+      - name: Parse Terraform outputs
+        id: tf_outputs
+        run: |
+          echo "Parsing outputs.json"
+          cat outputs.json
+          AUTH_BUCKET=$(jq -r '.auth_bucket_name.value' outputs.json)
+          AUTH_FUNCTION_NAME=$(jq -r '.auth_lambda_function_name.value' outputs.json)
+          AUTH_FUNCTION_ARN=$(jq -r '.auth_lambda_function_arn.value' outputs.json)
+          AUTH_API_URL=$(jq -r '.auth_api_invoke_url.value' outputs.json)
+
+          echo "auth_bucket=$AUTH_BUCKET" >> $GITHUB_OUTPUT
+          echo "auth_function_name=$AUTH_FUNCTION_NAME" >> $GITHUB_OUTPUT
+          echo "auth_function_arn=$AUTH_FUNCTION_ARN" >> $GITHUB_OUTPUT
+          echo "auth_api_url=$AUTH_API_URL" >> $GITHUB_OUTPUT
+
+      - name: Upload package to S3 (bucket from Terraform outputs)
+        run: |
+          BUCKET=${{ steps.tf_outputs.outputs.auth_bucket }}
+          KEY="techfood/auth/TechFood.Authentication.zip"
+          echo "Uploading to s3://$BUCKET/$KEY"
+          aws s3 cp bin/Release/TechFood.Authentication.zip s3://$BUCKET/$KEY
+
+      - name: Update Lambda function code (or create if not exists)
+        run: |
+          FUNC_NAME=${{ steps.tf_outputs.outputs.auth_function_name }}
+          BUCKET=${{ steps.tf_outputs.outputs.auth_bucket }}
+          KEY="techfood/auth/TechFood.Authentication.zip"
+
+          echo "Updating function code for $FUNC_NAME"
+          set -e
+          if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
+            aws lambda update-function-code --function-name "$FUNC_NAME" --s3-bucket "$BUCKET" --s3-key "$KEY" --publish
+          else
+            echo "Function $FUNC_NAME does not exist, attempting create via dotnet lambda deploy-function"
+            dotnet lambda deploy-function $FUNC_NAME --region ${{ env.AWS_REGION }} --package bin/Release/TechFood.Authentication.zip || (echo "Failed to create function"; exit 1)
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "Lambda function: ${{ steps.tf_outputs.outputs.auth_function_name }}"
+          echo "Lambda ARN: ${{ steps.tf_outputs.outputs.auth_function_arn }}"
+          echo "API URL: ${{ steps.tf_outputs.outputs.auth_api_url }}"
