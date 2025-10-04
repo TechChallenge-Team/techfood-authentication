@@ -27,10 +27,14 @@ jobs:
         run: dotnet build --configuration Release src/TechFood.Authentication/TechFood.Authentication.csproj
 
       - name: Install Amazon Lambda Tools
-        run: dotnet tool install -g Amazon.Lambda.Tools
+        run: |
+          dotnet tool install -g Amazon.Lambda.Tools
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Publish Lambda package
-        run: dotnet lambda package --configuration Release --project-location src/TechFood.Authentication/TechFood.Authentication.csproj --output-package bin/Release/TechFood.Authentication.zip
+        run: |
+          # --project-location expects a directory; point to the project folder
+          dotnet lambda package --configuration Release --project-location src/TechFood.Authentication --output-package bin/Release/TechFood.Authentication.zip
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
