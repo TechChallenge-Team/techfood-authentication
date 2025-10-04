@@ -3,21 +3,15 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: us-east-1
+  
 jobs:
   build-and-deploy-lambda:
     runs-on: ubuntu-latest
-    
-    # === CORREÇÃO CRÍTICA ===
-    # Adicionar o bloco 'secrets' para disponibilizar os segredos da Organização ao Job.
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-    # ========================
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
@@ -37,16 +31,40 @@ jobs:
         run: dotnet lambda package --configuration Release --project-location src/TechFood.Authentication/TechFood.Authentication.csproj --output-package bin/Release/TechFood.Authentication.zip
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          # Esta sintaxe aqui já estava correta, mas agora é reconhecida!
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: "us-east-1"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TESTE_LEO }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_TESTE_LEO }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_TESTE_LEO }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy Lambda function
+      # Using hardcoded values defined in env (AUTH_*) above. Replace them with
+      # the real values for your AWS Academy environment before running.
+
+      - name: Upload package to S3 (bucket from secrets)
         run: |
-          dotnet lambda deploy-function TechFoodAuthenticationLambda \
-            --region us-east-1 \
-            --package bin/Release/TechFood.Authentication.zip
+          BUCKET=${{ secrets.AUTH_BUCKET }}
+          KEY="techfood/auth/TechFood.Authentication.zip"
+          echo "Uploading to s3://$BUCKET/$KEY"
+          aws s3 cp bin/Release/TechFood.Authentication.zip s3://$BUCKET/$KEY
+
+      - name: Update Lambda function code (or create if not exists)
+        run: |
+          FUNC_NAME=${{ secrets.AUTH_FUNCTION_NAME }}
+          BUCKET=${{ secrets.AUTH_BUCKET }}
+          KEY="techfood/auth/TechFood.Authentication.zip"
+
+          echo "Updating function code for $FUNC_NAME"
+          set -e
+          if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
+            aws lambda update-function-code --function-name "$FUNC_NAME" --s3-bucket "$BUCKET" --s3-key "$KEY" --publish
+          else
+            echo "Function $FUNC_NAME does not exist, attempting create via dotnet lambda deploy-function"
+            dotnet lambda deploy-function $FUNC_NAME --region ${{ env.AWS_REGION }} --package bin/Release/TechFood.Authentication.zip || (echo "Failed to create function"; exit 1)
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "Lambda function: ${{ secrets.AUTH_FUNCTION_NAME }}"
+          echo "Lambda ARN: ${{ secrets.AUTH_FUNCTION_ARN }}"
+          echo "API URL: ${{ secrets.AUTH_API_URL }}"
