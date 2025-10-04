@@ -5,6 +5,11 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  # Valores derivados do terraform (preenchidos automaticamente)
+  # AUTH_BUCKET: techfood-lambda-artifacts-471112638163-us-east-1
+  # AUTH_FUNCTION_NAME: TechFoodAuthenticationLambda
+  # AUTH_FUNCTION_ARN: arn:aws:lambda:us-east-1:471112638163:function:TechFoodAuthenticationLambda
+  # AUTH_API_URL: https://1f6rcu8qf5.execute-api.us-east-1.amazonaws.com/prod/v1/authentication/signin
 
 jobs:
   build-and-deploy-lambda:
@@ -33,46 +38,25 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TESTE_LEO }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_TESTE_LEO }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_TESTE_LEO }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download Terraform outputs from S3
-        # The CI expects the terraform repo to upload outputs.json into this bucket
-        # Set secret TF_OUTPUTS_BUCKET to the bucket name (e.g. techfood-bucket1)
-        run: |
-          if [ -z "${{ secrets.TF_OUTPUTS_BUCKET }}" ]; then
-            echo "ERROR: secrets.TF_OUTPUTS_BUCKET not set"; exit 1
-          fi
-          aws s3 cp s3://${{ secrets.TF_OUTPUTS_BUCKET }}/terraform/outputs.json outputs.json
+      # Using hardcoded values defined in env (AUTH_*) above. Replace them with
+      # the real values for your AWS Academy environment before running.
 
-      - name: Parse Terraform outputs
-        id: tf_outputs
+      - name: Upload package to S3 (bucket from secrets)
         run: |
-          echo "Parsing outputs.json"
-          cat outputs.json
-          AUTH_BUCKET=$(jq -r '.auth_bucket_name.value' outputs.json)
-          AUTH_FUNCTION_NAME=$(jq -r '.auth_lambda_function_name.value' outputs.json)
-          AUTH_FUNCTION_ARN=$(jq -r '.auth_lambda_function_arn.value' outputs.json)
-          AUTH_API_URL=$(jq -r '.auth_api_invoke_url.value' outputs.json)
-
-          echo "auth_bucket=$AUTH_BUCKET" >> $GITHUB_OUTPUT
-          echo "auth_function_name=$AUTH_FUNCTION_NAME" >> $GITHUB_OUTPUT
-          echo "auth_function_arn=$AUTH_FUNCTION_ARN" >> $GITHUB_OUTPUT
-          echo "auth_api_url=$AUTH_API_URL" >> $GITHUB_OUTPUT
-
-      - name: Upload package to S3 (bucket from Terraform outputs)
-        run: |
-          BUCKET=${{ steps.tf_outputs.outputs.auth_bucket }}
+          BUCKET=${{ secrets.AUTH_BUCKET }}
           KEY="techfood/auth/TechFood.Authentication.zip"
           echo "Uploading to s3://$BUCKET/$KEY"
           aws s3 cp bin/Release/TechFood.Authentication.zip s3://$BUCKET/$KEY
 
       - name: Update Lambda function code (or create if not exists)
         run: |
-          FUNC_NAME=${{ steps.tf_outputs.outputs.auth_function_name }}
-          BUCKET=${{ steps.tf_outputs.outputs.auth_bucket }}
+          FUNC_NAME=${{ secrets.AUTH_FUNCTION_NAME }}
+          BUCKET=${{ secrets.AUTH_BUCKET }}
           KEY="techfood/auth/TechFood.Authentication.zip"
 
           echo "Updating function code for $FUNC_NAME"
@@ -86,6 +70,6 @@ jobs:
 
       - name: Deployment summary
         run: |
-          echo "Lambda function: ${{ steps.tf_outputs.outputs.auth_function_name }}"
-          echo "Lambda ARN: ${{ steps.tf_outputs.outputs.auth_function_arn }}"
-          echo "API URL: ${{ steps.tf_outputs.outputs.auth_api_url }}"
+          echo "Lambda function: ${{ secrets.AUTH_FUNCTION_NAME }}"
+          echo "Lambda ARN: ${{ secrets.AUTH_FUNCTION_ARN }}"
+          echo "API URL: ${{ secrets.AUTH_API_URL }}"
