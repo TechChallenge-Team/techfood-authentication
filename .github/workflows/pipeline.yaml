@@ -1,3 +1,7 @@
+# .github/workflows/deploy-lambda.yml
+
+name: Deploy .NET Lambda to AWS
+
 on:
   push:
     branches:
@@ -7,7 +11,14 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  
+  # ATENÇÃO: Confirme se o caminho do seu projeto .csproj está correto abaixo
+  DOTNET_PROJECT_PATH: src/TechFood.Authentication/TechFood.Authentication.csproj
+  # ATENÇÃO: Confirme se o diretório do seu projeto está correto abaixo
+  DOTNET_PROJECT_LOCATION: src/TechFood.Authentication
+  # ATENÇÃO: Confirme se este é o handler correto para sua função Lambda
+  LAMBDA_HANDLER: "TechFood.Authentication::TechFood.Authentication.Function::FunctionHandler"
+  OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
+
 jobs:
   build-and-deploy-lambda:
     runs-on: ubuntu-latest
@@ -21,10 +32,10 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore dependencies
-        run: dotnet restore src/TechFood.Authentication/TechFood.Authentication.csproj
+        run: dotnet restore ${{ env.DOTNET_PROJECT_PATH }}
 
       - name: Build project
-        run: dotnet build --configuration Release src/TechFood.Authentication/TechFood.Authentication.csproj
+        run: dotnet build --configuration Release ${{ env.DOTNET_PROJECT_PATH }}
 
       - name: Install Amazon Lambda Tools
         run: |
@@ -33,8 +44,7 @@ jobs:
 
       - name: Publish Lambda package
         run: |
-          # --project-location expects a directory; point to the project folder
-          dotnet lambda package --configuration Release --project-location src/TechFood.Authentication --output-package bin/Release/TechFood.Authentication.zip
+          dotnet lambda package --configuration Release --project-location ${{ env.DOTNET_PROJECT_LOCATION }} --output-package bin/Release/${{ env.OUTPUT_PACKAGE_NAME }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -44,33 +54,54 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_TESTE_LEO }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Using hardcoded values defined in env (AUTH_*) above. Replace them with
-      # the real values for your AWS Academy environment before running.
-
-      - name: Upload package to S3 (bucket from secrets)
+      - name: Upload package to S3
         run: |
           BUCKET=${{ secrets.AUTH_BUCKET }}
-          KEY="techfood/auth/TechFood.Authentication.zip"
+          KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
           echo "Uploading to s3://$BUCKET/$KEY"
-          aws s3 cp bin/Release/TechFood.Authentication.zip s3://$BUCKET/$KEY
+          aws s3 cp bin/Release/${{ env.OUTPUT_PACKAGE_NAME }} s3://$BUCKET/$KEY
 
-      - name: Update Lambda function code (or create if not exists)
+      - name: Create or Update Lambda function
         run: |
           FUNC_NAME=${{ secrets.AUTH_FUNCTION_NAME }}
           BUCKET=${{ secrets.AUTH_BUCKET }}
-          KEY="techfood/auth/TechFood.Authentication.zip"
+          KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
+          ROLE_ARN=${{ secrets.AUTH_LAMBDA_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
+          HANDLER="${{ env.LAMBDA_HANDLER }}"
+          RUNTIME="dotnet8"
 
-          echo "Updating function code for $FUNC_NAME"
+          # Verifica se o segredo do Role ARN foi configurado
+          if [ -z "$ROLE_ARN" ]; then
+            echo "ERRO: O segredo AUTH_LAMBDA_ROLE_ARN não está configurado no repositório."
+            echo "Por favor, crie um IAM Role para a função Lambda e adicione o ARN como um segredo."
+            exit 1
+          fi
+
+          echo "Checking if function $FUNC_NAME exists..."
           set -e
+
           if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
-            aws lambda update-function-code --function-name "$FUNC_NAME" --s3-bucket "$BUCKET" --s3-key "$KEY" --publish
+            echo "Function exists. Updating function code..."
+            aws lambda update-function-code \
+              --function-name "$FUNC_NAME" \
+              --s3-bucket "$BUCKET" \
+              --s3-key "$KEY" \
+              --publish
           else
-            echo "Function $FUNC_NAME does not exist, attempting create via dotnet lambda deploy-function"
-            dotnet lambda deploy-function $FUNC_NAME --region ${{ env.AWS_REGION }} --package bin/Release/TechFood.Authentication.zip || (echo "Failed to create function"; exit 1)
+            echo "Function does not exist. Creating new function..."
+            aws lambda create-function \
+              --function-name "$FUNC_NAME" \
+              --runtime $RUNTIME \
+              --role "$ROLE_ARN" \
+              --handler "$HANDLER" \
+              --code "S3Bucket=$BUCKET,S3Key=$KEY" \
+              --timeout 30 \
+              --memory-size 512 \
+              --publish
           fi
 
       - name: Deployment summary
         run: |
           echo "Lambda function: ${{ secrets.AUTH_FUNCTION_NAME }}"
-          echo "Lambda ARN: ${{ secrets.AUTH_FUNCTION_ARN }}"
-          echo "API URL: ${{ secrets.AUTH_API_URL }}"
+          echo "Lambda ARN: ${{ secrets.AUTH_FUNCTION_ARN }}" # Este segredo pode ser preenchido com o output do Terraform
+          echo "API URL: ${{ secrets.AUTH_API_URL }}" # Este segredo pode ser preenchido com o output do Terraform
