@@ -5,12 +5,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  # Valores derivados do terraform (preenchidos automaticamente)
-  # AUTH_BUCKET: techfood-lambda-artifacts-471112638163-us-east-1
-  # AUTH_FUNCTION_NAME: TechFoodAuthenticationLambda
-  # AUTH_FUNCTION_ARN: arn:aws:lambda:us-east-1:471112638163:function:TechFoodAuthenticationLambda
-  # AUTH_API_URL: https://1f6rcu8qf5.execute-api.us-east-1.amazonaws.com/prod/v1/authentication/signin
-
+  
 jobs:
   build-and-deploy-lambda:
     runs-on: ubuntu-latest
