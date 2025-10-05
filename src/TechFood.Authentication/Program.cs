@@ -4,6 +4,7 @@ using TechFood.Infra;
 
 var builder = WebApplication.CreateBuilder(args);
 {
+    builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
     builder.Services.AddPresentation(builder.Configuration, new PresentationOptions
     {
         AddSwagger = true,
