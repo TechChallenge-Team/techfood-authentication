@@ -58,12 +58,12 @@ jobs:
       - name: Parse outputs.json
         id: tf_outputs
         run: |
+          BUCKET_NAME=$(jq -r '.auth_lambda_artifacts_bucket_name.value' outputs.json)
           RDS_ENDPOINT=$(jq -r '.rds_endpoint.value' db-outputs.json)
           RDS_ENDPOINT="${RDS_ENDPOINT//:1433/,1433}"
-          BUCKET_NAME=$(jq -r '.auth_lambda_artifacts_bucket_name.value' db-outputs.json)
 
-          echo "rds_endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
           echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "rds_endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
 
       - name: Upload package to S3
         run: |
