@@ -19,6 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var app = builder.Build();
 {
+    app.UsePathBase("/auth");
+
     app.UseForwardedHeaders();
 
     if (!app.Environment.IsDevelopment())
