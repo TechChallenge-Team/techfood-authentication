@@ -60,7 +60,7 @@ jobs:
 
       - name: Create or Update Lambda function
         run: |
-          FUNC_NAME=${{ secrets.AUTH_FUNCTION_NAME }}
+          FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
           BUCKET=${{ secrets.AUTH_BUCKET }}
           KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
           ROLE_ARN=${{ vars.EKS_LAB_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
