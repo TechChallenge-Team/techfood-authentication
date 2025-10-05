@@ -13,7 +13,7 @@ env:
   AWS_REGION: us-east-1
   DOTNET_PROJECT_PATH: src/TechFood.Authentication/TechFood.Authentication.csproj
   DOTNET_PROJECT_LOCATION: src/TechFood.Authentication
-  LAMBDA_HANDLER: "TechFood.Lambda.Authentication::TechFood.Lambda.Authentication.Function::FunctionHandler"
+  LAMBDA_HANDLER: "TechFood.Authentication::TechFood.Authentication.Function::FunctionHandler"
   OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
 
 jobs:
