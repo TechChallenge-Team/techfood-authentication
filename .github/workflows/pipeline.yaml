@@ -60,20 +60,22 @@ jobs:
         run: |
           RDS_ENDPOINT=$(jq -r '.rds_endpoint.value' db-outputs.json)
           RDS_ENDPOINT="${RDS_ENDPOINT//:1433/,1433}"
+          BUCKET_NAME=$(jq -r '.auth_lambda_artifacts_bucket_name.value' db-outputs.json)
 
           echo "rds_endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload package to S3
         run: |
-          BUCKET=${{ vars.AUTH_BUCKET_NAME }}
+          BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
           KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
-          echo "Uploading to s3://$BUCKET/$KEY"
-          aws s3 cp bin/Release/${{ env.OUTPUT_PACKAGE_NAME }} s3://$BUCKET/$KEY
+          echo "Uploading to s3://$BUCKET_NAME/$KEY"
+          aws s3 cp bin/Release/${{ env.OUTPUT_PACKAGE_NAME }} s3://$BUCKET_NAME/$KEY
 
       - name: Create or Update Lambda function
         run: |
           FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
-          BUCKET=${{ vars.AUTH_BUCKET_NAME }}
+          BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
           KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
           ROLE_ARN=${{ vars.EKS_LAB_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
           HANDLER="${{ env.LAMBDA_HANDLER }}"
@@ -98,7 +100,7 @@ jobs:
             echo "Function exists. Updating function code..."
             aws lambda update-function-code \
               --function-name "$FUNC_NAME" \
-              --s3-bucket "$BUCKET" \
+              --s3-bucket "$BUCKET_NAME" \
               --s3-key "$KEY" \
               --publish
             
@@ -117,7 +119,7 @@ jobs:
               --runtime $RUNTIME \
               --role "$ROLE_ARN" \
               --handler "$HANDLER" \
-              --code "S3Bucket=$BUCKET,S3Key=$KEY" \
+              --code "S3Bucket=$BUCKET_NAME,S3Key=$KEY" \
               --timeout 30 \
               --memory-size 512 \
               --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\"}}" \
