@@ -11,12 +11,9 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  # ATENÇÃO: Confirme se o caminho do seu projeto .csproj está correto abaixo
   DOTNET_PROJECT_PATH: src/TechFood.Authentication/TechFood.Authentication.csproj
-  # ATENÇÃO: Confirme se o diretório do seu projeto está correto abaixo
   DOTNET_PROJECT_LOCATION: src/TechFood.Authentication
-  # ATENÇÃO: Confirme se este é o handler correto para sua função Lambda
-  LAMBDA_HANDLER: "TechFood.Authentication::TechFood.Authentication.Function::FunctionHandler"
+  LAMBDA_HANDLER: "TechFood.Lambda.Authentication::TechFood.Lambda.Authentication.Function::FunctionHandler"
   OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
 
 jobs:
@@ -66,13 +63,13 @@ jobs:
           FUNC_NAME=${{ secrets.AUTH_FUNCTION_NAME }}
           BUCKET=${{ secrets.AUTH_BUCKET }}
           KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
-          ROLE_ARN=${{ secrets.AUTH_LAMBDA_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
+          ROLE_ARN=${{ vars.EKS_LAB_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
           HANDLER="${{ env.LAMBDA_HANDLER }}"
           RUNTIME="dotnet8"
 
           # Verifica se o segredo do Role ARN foi configurado
           if [ -z "$ROLE_ARN" ]; then
-            echo "ERRO: O segredo AUTH_LAMBDA_ROLE_ARN não está configurado no repositório."
+            echo "ERRO: O segredo EKS_LAB_ROLE_ARN não está configurado no repositório."
             echo "Por favor, crie um IAM Role para a função Lambda e adicione o ARN como um segredo."
             exit 1
           fi
