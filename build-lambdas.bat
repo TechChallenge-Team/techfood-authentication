@@ -3,7 +3,7 @@ echo Building AWS Lambda functions...
 
 echo.
 echo Building Authentication Lambda...
-cd src\TechFood.Lambda.Authentication
+cd src\TechFood.Authentication
 dotnet publish -c Release -o bin\Release\publish
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build Authentication Lambda
