@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - main
-      - 'feature/*'
+      - "feature/*"
   workflow_dispatch: {}
 
 env:
@@ -51,6 +51,16 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_TESTE_LEO }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Parse outputs.json
+        id: tf_outputs
+        run: |
+          NLB_TARGET_GROUP_ARN=$(jq -r '.nlb_target_group_arn.value' outputs.json)
+          RDS_ENDPOINT=$(jq -r '.rds_endpoint.value' db-outputs.json)
+          RDS_ENDPOINT="${RDS_ENDPOINT//:1433/,1433}"
+
+          echo "nlb_target_group_arn=$NLB_TARGET_GROUP_ARN" >> $GITHUB_OUTPUT
+          echo "rds_endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
+
       - name: Upload package to S3
         run: |
           BUCKET=${{ secrets.AUTH_BUCKET }}
@@ -66,6 +76,7 @@ jobs:
           ROLE_ARN=${{ vars.EKS_LAB_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
           HANDLER="${{ env.LAMBDA_HANDLER }}"
           RUNTIME="dotnet8"
+          RDS_ENDPOINT="${{ steps.tf_outputs.outputs.rds_endpoint }}"
 
           # Verifica se o segredo do Role ARN foi configurado
           if [ -z "$ROLE_ARN" ]; then
@@ -75,7 +86,11 @@ jobs:
           fi
 
           echo "Checking if function $FUNC_NAME exists..."
+          echo "RDS Endpoint: $RDS_ENDPOINT"
           set -e
+
+          # Construir a connection string para SQL Server
+          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};TrustServerCertificate=true;"
 
           if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
             echo "Function exists. Updating function code..."
@@ -84,6 +99,11 @@ jobs:
               --s3-bucket "$BUCKET" \
               --s3-key "$KEY" \
               --publish
+            
+            echo "Updating function environment variables..."
+            aws lambda update-function-configuration \
+              --function-name "$FUNC_NAME" \
+              --environment "Variables={ConnectionStrings__DataBaseConection=$CONNECTION_STRING}"
           else
             echo "Function does not exist. Creating new function..."
             aws lambda create-function \
@@ -94,6 +114,7 @@ jobs:
               --code "S3Bucket=$BUCKET,S3Key=$KEY" \
               --timeout 30 \
               --memory-size 512 \
+              --environment "Variables={ConnectionStrings__DataBaseConection=$CONNECTION_STRING}" \
               --publish
           fi
 
