@@ -4,6 +4,7 @@ using TechFood.Infra;
 
 var builder = WebApplication.CreateBuilder(args);
 {
+    builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
     builder.Services.AddPresentation(builder.Configuration, new PresentationOptions
     {
         AddSwagger = true,
@@ -18,6 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var app = builder.Build();
 {
+    app.UsePathBase("/auth");
+
     app.UseForwardedHeaders();
 
     if (!app.Environment.IsDevelopment())
@@ -35,8 +38,9 @@ var app = builder.Build();
             options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi2_0;
         });
 
-        app.UseSwaggerUI();
     }
+
+    app.UseSwaggerUI();
 
     app.UseInfra();
 

@@ -1,11 +1,21 @@
+# .github/workflows/deploy-lambda.yml
+
+name: Deploy .NET Lambda to AWS
+
 on:
   push:
     branches:
       - main
+      - "feature/*"
+  workflow_dispatch: {}
 
 env:
   AWS_REGION: us-east-1
-  
+  DOTNET_PROJECT_PATH: src/TechFood.Authentication/TechFood.Authentication.csproj
+  DOTNET_PROJECT_LOCATION: src/TechFood.Authentication
+  LAMBDA_HANDLER: "TechFood.Authentication"
+  OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
+
 jobs:
   build-and-deploy-lambda:
     runs-on: ubuntu-latest
@@ -19,52 +29,100 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore dependencies
-        run: dotnet restore src/TechFood.Authentication/TechFood.Authentication.csproj
+        run: dotnet restore ${{ env.DOTNET_PROJECT_PATH }}
 
       - name: Build project
-        run: dotnet build --configuration Release src/TechFood.Authentication/TechFood.Authentication.csproj
+        run: dotnet build --configuration Release ${{ env.DOTNET_PROJECT_PATH }}
 
       - name: Install Amazon Lambda Tools
-        run: dotnet tool install -g Amazon.Lambda.Tools
+        run: |
+          dotnet tool install -g Amazon.Lambda.Tools
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Publish Lambda package
-        run: dotnet lambda package --configuration Release --project-location src/TechFood.Authentication/TechFood.Authentication.csproj --output-package bin/Release/TechFood.Authentication.zip
+        run: |
+          dotnet lambda package --configuration Release --project-location ${{ env.DOTNET_PROJECT_LOCATION }} --output-package bin/Release/${{ env.OUTPUT_PACKAGE_NAME }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TESTE_LEO }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_TESTE_LEO }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_TESTE_LEO }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Using hardcoded values defined in env (AUTH_*) above. Replace them with
-      # the real values for your AWS Academy environment before running.
-
-      - name: Upload package to S3 (bucket from secrets)
+      - name: Download outputs.json
         run: |
-          BUCKET=${{ secrets.AUTH_BUCKET }}
-          KEY="techfood/auth/TechFood.Authentication.zip"
-          echo "Uploading to s3://$BUCKET/$KEY"
-          aws s3 cp bin/Release/TechFood.Authentication.zip s3://$BUCKET/$KEY
+          aws s3 cp s3://${{ vars.TF_BUCKET_NAME }}/outputs.json outputs.json && \
+          aws s3 cp s3://${{ vars.TF_BUCKET_NAME }}/db-outputs.json db-outputs.json
 
-      - name: Update Lambda function code (or create if not exists)
+      - name: Parse outputs.json
+        id: tf_outputs
         run: |
-          FUNC_NAME=${{ secrets.AUTH_FUNCTION_NAME }}
-          BUCKET=${{ secrets.AUTH_BUCKET }}
-          KEY="techfood/auth/TechFood.Authentication.zip"
+          BUCKET_NAME=$(jq -r '.auth_lambda_artifacts_bucket_name.value' outputs.json)
+          RDS_ENDPOINT=$(jq -r '.rds_endpoint.value' db-outputs.json)
+          RDS_ENDPOINT="${RDS_ENDPOINT//:1433/,1433}"
 
-          echo "Updating function code for $FUNC_NAME"
-          set -e
-          if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
-            aws lambda update-function-code --function-name "$FUNC_NAME" --s3-bucket "$BUCKET" --s3-key "$KEY" --publish
-          else
-            echo "Function $FUNC_NAME does not exist, attempting create via dotnet lambda deploy-function"
-            dotnet lambda deploy-function $FUNC_NAME --region ${{ env.AWS_REGION }} --package bin/Release/TechFood.Authentication.zip || (echo "Failed to create function"; exit 1)
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "rds_endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
+
+      - name: Upload package to S3
+        run: |
+          BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
+          KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
+          echo "Uploading to s3://$BUCKET_NAME/$KEY"
+          aws s3 cp bin/Release/${{ env.OUTPUT_PACKAGE_NAME }} s3://$BUCKET_NAME/$KEY
+
+      - name: Create or Update Lambda function
+        run: |
+          FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
+          BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
+          KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
+          ROLE_ARN=${{ vars.EKS_LAB_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
+          HANDLER="${{ env.LAMBDA_HANDLER }}"
+          RUNTIME="dotnet8"
+          RDS_ENDPOINT="${{ steps.tf_outputs.outputs.rds_endpoint }}"
+
+          # Verifica se o segredo do Role ARN foi configurado
+          if [ -z "$ROLE_ARN" ]; then
+            echo "ERRO: O segredo EKS_LAB_ROLE_ARN não está configurado no repositório."
+            echo "Por favor, crie um IAM Role para a função Lambda e adicione o ARN como um segredo."
+            exit 1
           fi
 
-      - name: Deployment summary
-        run: |
-          echo "Lambda function: ${{ secrets.AUTH_FUNCTION_NAME }}"
-          echo "Lambda ARN: ${{ secrets.AUTH_FUNCTION_ARN }}"
-          echo "API URL: ${{ secrets.AUTH_API_URL }}"
+          echo "Checking if function $FUNC_NAME exists..."
+          echo "RDS Endpoint: $RDS_ENDPOINT"
+          set -e
+
+          # Construir a connection string para SQL Server
+          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};TrustServerCertificate=true;"
+
+          if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
+            echo "Function exists. Updating function code..."
+            aws lambda update-function-code \
+              --function-name "$FUNC_NAME" \
+              --s3-bucket "$BUCKET_NAME" \
+              --s3-key "$KEY" \
+              --publish
+            
+            echo "Waiting for function update to complete..."
+            sleep 30
+            aws lambda wait function-updated --function-name "$FUNC_NAME"
+            
+            echo "Updating function environment variables..."
+            aws lambda update-function-configuration \
+              --function-name "$FUNC_NAME" \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\"}}"
+          else
+            echo "Function does not exist. Creating new function..."
+            aws lambda create-function \
+              --function-name "$FUNC_NAME" \
+              --runtime $RUNTIME \
+              --role "$ROLE_ARN" \
+              --handler "$HANDLER" \
+              --code "S3Bucket=$BUCKET_NAME,S3Key=$KEY" \
+              --timeout 30 \
+              --memory-size 512 \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\"}}" \
+              --publish
+          fi
