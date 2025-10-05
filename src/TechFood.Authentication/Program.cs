@@ -36,8 +36,9 @@ var app = builder.Build();
             options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi2_0;
         });
 
-        app.UseSwaggerUI();
     }
+
+    app.UseSwaggerUI();
 
     app.UseInfra();
 
