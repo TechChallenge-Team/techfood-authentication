@@ -95,7 +95,7 @@ jobs:
           set -e
 
           # Construir a connection string para SQL Server
-          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};TrustServerCertificate=true;"
+          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ secrets.RDS_USERNAME }};Password=${{ secrets.RDS_PASSWORD }};TrustServerCertificate=true;"
           JWT_KEY="${{ secrets.JWT_KEY }}"
 
           if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
