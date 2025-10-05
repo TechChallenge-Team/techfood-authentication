@@ -105,7 +105,7 @@ jobs:
             echo "Updating function environment variables..."
             aws lambda update-function-configuration \
               --function-name "$FUNC_NAME" \
-              --environment "Variables={ConnectionStrings__DataBaseConection=$CONNECTION_STRING}"
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\"}}"
           else
             echo "Function does not exist. Creating new function..."
             aws lambda create-function \
@@ -116,7 +116,7 @@ jobs:
               --code "S3Bucket=$BUCKET,S3Key=$KEY" \
               --timeout 30 \
               --memory-size 512 \
-              --environment "Variables={ConnectionStrings__DataBaseConection=$CONNECTION_STRING}" \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\"}}" \
               --publish
           fi
 
