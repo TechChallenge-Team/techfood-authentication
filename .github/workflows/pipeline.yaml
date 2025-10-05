@@ -51,14 +51,16 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_TESTE_LEO }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Download outputs.json
+        run: |
+          aws s3 cp s3://techfood-ts-bucket/db-outputs.json db-outputs.json
+
       - name: Parse outputs.json
         id: tf_outputs
         run: |
-          NLB_TARGET_GROUP_ARN=$(jq -r '.nlb_target_group_arn.value' outputs.json)
           RDS_ENDPOINT=$(jq -r '.rds_endpoint.value' db-outputs.json)
           RDS_ENDPOINT="${RDS_ENDPOINT//:1433/,1433}"
 
-          echo "nlb_target_group_arn=$NLB_TARGET_GROUP_ARN" >> $GITHUB_OUTPUT
           echo "rds_endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
 
       - name: Upload package to S3
