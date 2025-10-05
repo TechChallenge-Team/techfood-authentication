@@ -96,6 +96,7 @@ jobs:
 
           # Construir a connection string para SQL Server
           CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};TrustServerCertificate=true;"
+          JWT_KEY="${{ secrets.JWT_KEY }}"
 
           if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
             echo "Function exists. Updating function code..."
@@ -112,7 +113,7 @@ jobs:
             echo "Updating function environment variables..."
             aws lambda update-function-configuration \
               --function-name "$FUNC_NAME" \
-              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\"}}"
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Jwt__Key\":\"$JWT_KEY\"}}"
           else
             echo "Function does not exist. Creating new function..."
             aws lambda create-function \
@@ -123,6 +124,6 @@ jobs:
               --code "S3Bucket=$BUCKET_NAME,S3Key=$KEY" \
               --timeout 30 \
               --memory-size 512 \
-              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\"}}" \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Jwt__Key\":\"$JWT_KEY\"}}" \
               --publish
           fi
