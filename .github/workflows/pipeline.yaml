@@ -102,6 +102,10 @@ jobs:
               --s3-key "$KEY" \
               --publish
             
+            echo "Waiting for function update to complete..."
+            sleep 30
+            aws lambda wait function-updated --function-name "$FUNC_NAME"
+            
             echo "Updating function environment variables..."
             aws lambda update-function-configuration \
               --function-name "$FUNC_NAME" \
