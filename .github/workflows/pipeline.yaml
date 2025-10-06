@@ -1,0 +1,154 @@
+# .github/workflows/deploy-lambda.yml
+
+name: Deploy .NET Lambda to AWS
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/*"
+  workflow_dispatch: {}
+
+env:
+  AWS_REGION: us-east-1
+  DOTNET_PROJECT_PATH: src/TechFood.Authentication/TechFood.Authentication.csproj
+  DOTNET_PROJECT_LOCATION: src/TechFood.Authentication
+  LAMBDA_HANDLER: "TechFood.Authentication"
+  OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
+
+jobs:
+  build-and-deploy-lambda:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.DOTNET_PROJECT_PATH }}
+
+      - name: Build project
+        run: dotnet build --configuration Release ${{ env.DOTNET_PROJECT_PATH }}
+
+      - name: Install Amazon Lambda Tools
+        run: |
+          dotnet tool install -g Amazon.Lambda.Tools
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Publish Lambda package
+        run: |
+          dotnet lambda package --configuration Release --project-location ${{ env.DOTNET_PROJECT_LOCATION }} --output-package bin/Release/${{ env.OUTPUT_PACKAGE_NAME }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download outputs.json
+        run: |
+          aws s3 cp s3://${{ vars.TF_BUCKET_NAME }}/outputs.json outputs.json && \
+          aws s3 cp s3://${{ vars.TF_BUCKET_NAME }}/db-outputs.json db-outputs.json
+
+      - name: Parse outputs.json
+        id: tf_outputs
+        run: |
+          BUCKET_NAME=$(jq -r '.auth_lambda_artifacts_bucket_name.value' outputs.json)
+          RDS_ENDPOINT=$(jq -r '.rds_endpoint.value' db-outputs.json)
+          RDS_ENDPOINT="${RDS_ENDPOINT//:1433/,1433}"
+
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "rds_endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
+
+      - name: Upload package to S3
+        run: |
+          BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
+          KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
+          echo "Uploading to s3://$BUCKET_NAME/$KEY"
+          aws s3 cp bin/Release/${{ env.OUTPUT_PACKAGE_NAME }} s3://$BUCKET_NAME/$KEY
+
+      - name: Create or Update Lambda function
+        run: |
+          FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
+          BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
+          KEY="techfood/auth/${{ env.OUTPUT_PACKAGE_NAME }}"
+          ROLE_ARN=${{ vars.EKS_LAB_ROLE_ARN }} # <= NOVO SEGREDO NECESSÁRIO!
+          HANDLER="${{ env.LAMBDA_HANDLER }}"
+          RUNTIME="dotnet8"
+          RDS_ENDPOINT="${{ steps.tf_outputs.outputs.rds_endpoint }}"
+
+          # Verifica se o segredo do Role ARN foi configurado
+          if [ -z "$ROLE_ARN" ]; then
+            echo "ERRO: O segredo EKS_LAB_ROLE_ARN não está configurado no repositório."
+            echo "Por favor, crie um IAM Role para a função Lambda e adicione o ARN como um segredo."
+            exit 1
+          fi
+
+          echo "Checking if function $FUNC_NAME exists..."
+          echo "RDS Endpoint: $RDS_ENDPOINT"
+          set -e
+
+          # Construir a connection string para SQL Server
+          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ secrets.RDS_USERNAME }};Password=${{ secrets.RDS_PASSWORD }};TrustServerCertificate=true;"
+          JWT_KEY="${{ secrets.JWT_KEY }}"
+
+          if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
+            echo "Function exists. Updating function code..."
+            aws lambda update-function-code \
+              --function-name "$FUNC_NAME" \
+              --s3-bucket "$BUCKET_NAME" \
+              --s3-key "$KEY" \
+              --publish
+            
+            echo "Waiting for function update to complete..."
+            sleep 30
+            aws lambda wait function-updated --function-name "$FUNC_NAME"
+            
+            echo "Updating function environment variables..."
+            aws lambda update-function-configuration \
+              --function-name "$FUNC_NAME" \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Jwt__Key\":\"$JWT_KEY\"}}"
+          else
+            echo "Function does not exist. Creating new function..."
+            aws lambda create-function \
+              --function-name "$FUNC_NAME" \
+              --runtime $RUNTIME \
+              --role "$ROLE_ARN" \
+              --handler "$HANDLER" \
+              --code "S3Bucket=$BUCKET_NAME,S3Key=$KEY" \
+              --timeout 30 \
+              --memory-size 512 \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Jwt__Key\":\"$JWT_KEY\"}}" \
+              --publish
+          fi
+
+      - name: Add API Gateway permission to Lambda
+        run: |
+          FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
+          API_GATEWAY_ID=$(jq -r '.api_gateway_id.value' outputs.json)
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          
+          echo "Adding API Gateway permission to Lambda function..."
+          echo "API Gateway ID: $API_GATEWAY_ID"
+          echo "Function Name: $FUNC_NAME"
+          
+          # Remove permissão existente se houver (ignora erro se não existir)
+          aws lambda remove-permission \
+            --function-name "$FUNC_NAME" \
+            --statement-id "AllowAPIGatewayInvoke" 2>/dev/null || true
+          
+          # Adiciona nova permissão
+          aws lambda add-permission \
+            --function-name "$FUNC_NAME" \
+            --statement-id "AllowAPIGatewayInvoke" \
+            --action "lambda:InvokeFunction" \
+            --principal "apigateway.amazonaws.com" \
+            --source-arn "arn:aws:execute-api:${{ env.AWS_REGION }}:${AWS_ACCOUNT_ID}:${API_GATEWAY_ID}/*/*"
+          
+          echo "Permission added successfully!"
