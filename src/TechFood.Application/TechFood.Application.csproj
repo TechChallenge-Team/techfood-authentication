@@ -46,8 +46,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Authentication\Events\" />
-    <Folder Include="Authentication\Queries\" />
+    <Folder Include="Events\" />
+    <Folder Include="Queries\" />
     <Folder Include="Common\Data\" />
     <Folder Include="Common\Services\" />
   </ItemGroup>

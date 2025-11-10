@@ -12,6 +12,8 @@ public class AuthContext(DbContextOptions<AuthContext> options) : TechFoodContex
 {
     public DbSet<User> Users { get; set; } = null!;
 
+    public DbSet<ServiceClient> ServiceClients { get; set; } = null!;
+
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await base.SaveChangesAsync(cancellationToken);
@@ -73,6 +75,7 @@ public class AuthContext(DbContextOptions<AuthContext> options) : TechFoodContex
 
     private static void SeedContext(ModelBuilder modelBuilder)
     {
+        // Seed User
         modelBuilder.Entity<User>().OwnsOne(c => c.Name)
            .HasData(
                new { UserId = new Guid("fa09f3a0-f22d-40a8-9cca-0c64e5ed50e4"), FullName = "John Admin" }
@@ -87,6 +90,58 @@ public class AuthContext(DbContextOptions<AuthContext> options) : TechFoodContex
             .HasData(
                 // password: 123456
                 new { Id = new Guid("fa09f3a0-f22d-40a8-9cca-0c64e5ed50e4"), Username = "john.admin", Role = "admin", PasswordHash = "AQAAAAIAAYagAAAAEKs0I0Zk5QKKieJTm20PwvTmpkSfnp5BhSl5E35ny8DqffCJA+CiDRnnKRCeOx8+mg==", IsDeleted = false }
+            );
+
+        modelBuilder.Entity<ServiceClient>()
+            .HasData(
+                // client secret: iY0M+6c/1fV9cgMV2HE6uIcpeiW5uMQpdEuff4t6siE=
+                new
+                {
+                    Id = new Guid("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"),
+                    ClientId = "order-service",
+                    ClientSecretHash = "AQAAAAIAAYagAAAAEGc5qkWBdWL8/9BHGSyC24vz49eu41YPzSg0AaUFWNzA/qJgKZQy0dK+BiUDwo45qw==",
+                    Name = "Order Service",
+                    Scopes = new[] { "orders.read", "orders.write", "users.read" },
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    IsDeleted = false
+                },
+                // client secret: SLll0AcTiwcqMqqo2IJOGoHHjsVGoynb0ECIebV0yow=
+                new
+                {
+                    Id = new Guid("b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e"),
+                    ClientId = "payment-service",
+                    ClientSecretHash = "AQAAAAIAAYagAAAAEJ1h6kwzl70PTafDv/XTtOK0OD5fgj+7ushepfeOcmT2fagJajeYNh0jeQSo7YYIlQ==",
+                    Name = "Payment Service",
+                    Scopes = new[] { "payments.read", "payments.write", "orders.read", "users.read" },
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    IsDeleted = false
+                },
+                // client secret: tTBXfwMODoJno6VcUYHYhaILa0a8aZ2YLByafZTgjJU=
+                new
+                {
+                    Id = new Guid("c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f"),
+                    ClientId = "kitchen-service",
+                    ClientSecretHash = "AAQAAAAIAAYagAAAAEK0Ly9jwdR3uEE1dXSiXeN6Zqpnvz2XWdEKTcaoc+MBGSvoj31/sGh4wlH3WEggI5Q==",
+                    Name = "Kitchen Service",
+                    Scopes = new[] { "kitchen.read", "kitchen.write", "orders.read", "users.read" },
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    IsDeleted = false
+                },
+                // client secret: H4Ebf8wN59GG1y0REozqTFlQKybLbsiOigoSvRWBgiA=
+                new
+                {
+                    Id = new Guid("d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a"),
+                    ClientId = "backoffice-service",
+                    ClientSecretHash = "AQAAAAIAAYagAAAAEJlLak1GYPXjel9Lc9LhwpLilkyUvFhwBuxNL0g8sn6POZv3fD+XqHN0C90pJbE9vg==",
+                    Name = "Backoffice",
+                    Scopes = new[] { "orders.read", "orders.write", "payments.read", "payments.write", "users.read", "users.write", "kitchen.read", "kitchen.write" },
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    IsDeleted = false
+                }
             );
     }
 

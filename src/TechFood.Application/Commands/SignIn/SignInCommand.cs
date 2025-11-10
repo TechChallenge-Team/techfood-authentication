@@ -1,6 +1,6 @@
 using MediatR;
-using TechFood.Application.Authentication.Dto;
+using TechFood.Application.Dto;
 
-namespace TechFood.Application.Authentication.Commands;
+namespace TechFood.Application.Commands.SignIn;
 
 public record SignInCommand(string Username, string Password) : IRequest<SignInResultDto>;

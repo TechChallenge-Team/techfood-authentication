@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -8,17 +8,20 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using TechFood.Application.Authentication.Dto;
+using TechFood.Application.Dto;
 using TechFood.Domain.Entities;
 using TechFood.Domain.Repositories;
 
-namespace TechFood.Application.Authentication.Commands;
+namespace TechFood.Application.Commands.SignIn;
 
 public class SignInCommandHandler(
         IUserRepository repo,
         IConfiguration configuration)
             : IRequestHandler<SignInCommand, SignInResultDto>
 {
+    private const string Issuer = "techfood-jwts";
+    private const string Audience = "techfood";
+
     private static readonly TimeSpan _tokenExpiration = TimeSpan.FromHours(1);
 
     public async Task<SignInResultDto> Handle(SignInCommand request, CancellationToken cancellationToken)
@@ -37,18 +40,18 @@ public class SignInCommandHandler(
             throw new Common.Exceptions.ApplicationException(Common.Resources.Exceptions.Auth_InvalidUseOrPassword);
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Authentication:Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             claims: new[]
             {
-                    new Claim(ClaimTypes.Name, request.Username),
-                    new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.Name, request.Username),
+                new Claim(ClaimTypes.Role, user.Role)
             },
             expires: DateTime.UtcNow.Add(_tokenExpiration),
-            audience: configuration["Jwt:Audience"],
-            issuer: configuration["Jwt:Issuer"],
+            audience: Audience,
+            issuer: Issuer,
             signingCredentials: creds);
 
         return new(

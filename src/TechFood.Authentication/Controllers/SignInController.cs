@@ -1,17 +1,17 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using TechFood.Application.Authentication.Commands;
+using TechFood.Application.Commands.SignIn;
 using TechFood.Contracts.Authentication;
 
 namespace TechFood.Authentication.Controllers;
 
 [ApiController]
 [Route("v1/[controller]")]
-public class AuthenticationController(IMediator mediator) : ControllerBase
+public class SignInController(IMediator mediator) : ControllerBase
 {
     private readonly IMediator _mediator = mediator;
 
-    [HttpPost("signin")]
+    [HttpPost]
     public async Task<IActionResult> SignInAsync(SignInRequest request)
     {
         var command = new SignInCommand(request.Username, request.Password);
