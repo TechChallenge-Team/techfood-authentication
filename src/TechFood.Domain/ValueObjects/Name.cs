@@ -1,5 +1,5 @@
 using System;
-using TechFood.Domain.Common.ValueObjects;
+using TechFood.Shared.Domain.ValueObjects;
 
 namespace TechFood.Domain.ValueObjects;
 

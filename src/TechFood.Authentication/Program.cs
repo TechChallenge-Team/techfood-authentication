@@ -1,6 +1,7 @@
 using TechFood.Application;
-using TechFood.Common.Extensions;
 using TechFood.Infra;
+using TechFood.Infra.Persistence.Contexts;
+using TechFood.Shared.Presentation.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 {
@@ -9,16 +10,18 @@ var builder = WebApplication.CreateBuilder(args);
     {
         AddSwagger = true,
         AddJwtAuthentication = true,
-        SwaggerTitle = "TechFood Lambda Customers API V1",
-        SwaggerDescription = "TechFood Lambda Customers API V1"
+        SwaggerTitle = "TechFood Authentication API V1",
+        SwaggerDescription = "TechFood Authentication API V1"
     });
 
-    builder.Services.AddInfra();
     builder.Services.AddApplication();
+    builder.Services.AddInfra();
 }
 
 var app = builder.Build();
 {
+    app.RunMigration<AuthContext>();
+
     app.UsePathBase("/auth");
 
     app.UseForwardedHeaders();
@@ -37,7 +40,6 @@ var app = builder.Build();
         {
             options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi2_0;
         });
-
     }
 
     app.UseSwaggerUI();
@@ -47,6 +49,8 @@ var app = builder.Build();
     app.UseRouting();
 
     app.UseCors();
+
+    app.UseAuthentication();
 
     app.UseAuthorization();
 

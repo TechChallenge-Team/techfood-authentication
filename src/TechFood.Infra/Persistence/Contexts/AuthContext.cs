@@ -1,28 +1,16 @@
 using System;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using TechFood.Domain.Common.Entities;
 using TechFood.Domain.Entities;
+using TechFood.Shared.Infra.Persistence.Contexts;
 
 namespace TechFood.Infra.Persistence.Contexts;
 
-public class TechFoodContext(DbContextOptions<TechFoodContext> options) : DbContext(options)
+public class AuthContext(DbContextOptions<AuthContext> options) : TechFoodContext(options)
 {
     public DbSet<User> Users { get; set; } = null!;
-
-    public async Task<bool> CommitAsync()
-    {
-        var success = await SaveChangesAsync() > 0;
-        return success;
-    }
-
-    public Task RollbackAsync()
-    {
-        return Task.CompletedTask;
-    }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -31,32 +19,11 @@ public class TechFoodContext(DbContextOptions<TechFoodContext> options) : DbCont
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(TechFoodContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AuthContext).Assembly);
 
         var properties = modelBuilder.Model
             .GetEntityTypes()
             .SelectMany(t => t.GetProperties());
-
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
-            if (typeof(Entity).IsAssignableFrom(entityType.ClrType))
-            {
-                var parameter = Expression.Parameter(entityType.ClrType, "e");
-                var property = Expression.Property(parameter, nameof(Entity.IsDeleted));
-                var condition = Expression.Equal(property, Expression.Constant(false));
-                var lambda = Expression.Lambda(condition, parameter);
-
-                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
-
-                modelBuilder.Entity(entityType.ClrType)
-                    .HasKey(nameof(Entity.Id));
-
-                modelBuilder.Entity(entityType.ClrType)
-                    .Property(nameof(Entity.Id))
-                    .IsRequired()
-                    .ValueGeneratedNever();
-            }
-        }
 
         var stringProperties = properties.Where(p => p.ClrType == typeof(string));
         foreach (var property in stringProperties)
@@ -99,7 +66,28 @@ public class TechFoodContext(DbContextOptions<TechFoodContext> options) : DbCont
             property.SetColumnType("decimal(6, 2)");
         }
 
+        SeedContext(modelBuilder);
+
         base.OnModelCreating(modelBuilder);
+    }
+
+    private static void SeedContext(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<User>().OwnsOne(c => c.Name)
+           .HasData(
+               new { UserId = new Guid("fa09f3a0-f22d-40a8-9cca-0c64e5ed50e4"), FullName = "John Admin" }
+           );
+
+        modelBuilder.Entity<User>().OwnsOne(c => c.Email)
+         .HasData(
+             new { UserId = new Guid("fa09f3a0-f22d-40a8-9cca-0c64e5ed50e4"), Address = "john.admin@techfood.com" }
+         );
+
+        modelBuilder.Entity<User>()
+            .HasData(
+                // password: 123456
+                new { Id = new Guid("fa09f3a0-f22d-40a8-9cca-0c64e5ed50e4"), Username = "john.admin", Role = "admin", PasswordHash = "AQAAAAIAAYagAAAAEKs0I0Zk5QKKieJTm20PwvTmpkSfnp5BhSl5E35ny8DqffCJA+CiDRnnKRCeOx8+mg==", IsDeleted = false }
+            );
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

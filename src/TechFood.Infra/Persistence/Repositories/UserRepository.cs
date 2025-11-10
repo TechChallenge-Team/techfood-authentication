@@ -7,9 +7,9 @@ using TechFood.Infra.Persistence.Contexts;
 
 namespace TechFood.Infra.Persistence.Repositories
 {
-    internal class UserRepository(TechFoodContext dbContext) : IUserRepository
+    internal class UserRepository(AuthContext dbContext) : IUserRepository
     {
-        private readonly TechFoodContext _dbContext = dbContext;
+        private readonly AuthContext _dbContext = dbContext;
 
         public async Task<Guid> AddAsync(User user)
         {

@@ -6,6 +6,7 @@ using TechFood.Application;
 using TechFood.Domain.Repositories;
 using TechFood.Infra.Persistence.Contexts;
 using TechFood.Infra.Persistence.Repositories;
+using TechFood.Shared.Infra.Extensions;
 
 namespace TechFood.Infra;
 
@@ -13,13 +14,14 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfra(this IServiceCollection services)
     {
-        //Context
-        services.AddScoped<TechFoodContext>();
-        services.AddDbContext<TechFoodContext>((serviceProvider, options) =>
+        services.AddSharedInfra<AuthContext>(new InfraOptions
         {
-            var config = serviceProvider.GetRequiredService<IConfiguration>();
-
-            options.UseSqlServer(config.GetConnectionString("DataBaseConection"));
+            DbContext = (serviceProvider, dbOptions) =>
+            {
+                var config = serviceProvider.GetRequiredService<IConfiguration>();
+                dbOptions.UseSqlServer(config.GetConnectionString("DataBaseConection"));
+            },
+            ApplicationAssembly = typeof(DependecyInjection).Assembly
         });
 
         services.AddScoped<IUserRepository, UserRepository>();

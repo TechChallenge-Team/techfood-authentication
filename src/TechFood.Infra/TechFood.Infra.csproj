@@ -17,6 +17,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.4" />
+    <PackageReference Include="TechFood.Shared.Infra" Version="0.2.2-rc" />
     <!--<PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="9.0.3" />-->
   </ItemGroup>
   

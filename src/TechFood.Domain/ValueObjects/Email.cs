@@ -1,7 +1,7 @@
 using System;
-using TechFood.Domain.Common.Exceptions;
-using TechFood.Domain.Common.Validations;
-using TechFood.Domain.Common.ValueObjects;
+using TechFood.Shared.Domain.Exceptions;
+using TechFood.Shared.Domain.Validations;
+using TechFood.Shared.Domain.ValueObjects;
 
 namespace TechFood.Domain.ValueObjects;
 

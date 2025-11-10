@@ -6,6 +6,8 @@ namespace TechFood.Infra
     {
         public static IApplicationBuilder UseInfra(this IApplicationBuilder app)
         {
+            app.UseSharedInfra();
+
             return app;
         }
     }
