@@ -12,19 +12,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Solution Items", "_Solutio
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Infra", "src\TechFood.Infra\TechFood.Infra.csproj", "{A8E58EB7-CE3A-FFCD-11A5-06C7349FA2B0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Authentication.Infra", "src\TechFood.Authentication.Infra\TechFood.Authentication.Infra.csproj", "{A8E58EB7-CE3A-FFCD-11A5-06C7349FA2B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Application", "src\TechFood.Application\TechFood.Application.csproj", "{EAB5E842-A669-D688-2563-2413C5C33ADE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Authentication.Application", "src\TechFood.Authentication.Application\TechFood.Authentication.Application.csproj", "{EAB5E842-A669-D688-2563-2413C5C33ADE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Domain", "src\TechFood.Domain\TechFood.Domain.csproj", "{716FDCF9-ADE7-95A3-1338-FA25EBCFFAC8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Authentication.Domain", "src\TechFood.Authentication.Domain\TechFood.Authentication.Domain.csproj", "{716FDCF9-ADE7-95A3-1338-FA25EBCFFAC8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Contracts", "src\TechFood.Contracts\TechFood.Contracts.csproj", "{D88970C5-E323-74AF-3F84-11BDC5D3767E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Authentication.Contracts", "src\TechFood.Authentication.Contracts\TechFood.Authentication.Contracts.csproj", "{D88970C5-E323-74AF-3F84-11BDC5D3767E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Authentication", "src\TechFood.Authentication\TechFood.Authentication.csproj", "{11DB58FA-33AF-9889-10E1-F7E2F65C8BC5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Authentication.Api", "src\TechFood.Authentication.Api\TechFood.Authentication.Api.csproj", "{11DB58FA-33AF-9889-10E1-F7E2F65C8BC5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{BCC7F15E-FC30-4273-A698-0CBF8F459016}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceClientManager", "tools\ServiceClientManager\ServiceClientManager.csproj", "{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechFood.Authentication.ServiceClientManager", "tools\TechFood.Authentication.ServiceClientManager\TechFood.Authentication.ServiceClientManager.csproj", "{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -96,18 +96,18 @@ Global
 		{11DB58FA-33AF-9889-10E1-F7E2F65C8BC5}.Release|x64.Build.0 = Release|Any CPU
 		{11DB58FA-33AF-9889-10E1-F7E2F65C8BC5}.Release|x86.ActiveCfg = Release|Any CPU
 		{11DB58FA-33AF-9889-10E1-F7E2F65C8BC5}.Release|x86.Build.0 = Release|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Debug|x64.Build.0 = Debug|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Debug|x86.Build.0 = Debug|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Release|x64.ActiveCfg = Release|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Release|x64.Build.0 = Release|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Release|x86.ActiveCfg = Release|Any CPU
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E}.Release|x86.Build.0 = Release|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Debug|x64.Build.0 = Debug|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Debug|x86.Build.0 = Debug|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Release|x64.ActiveCfg = Release|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Release|x64.Build.0 = Release|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -118,7 +118,7 @@ Global
 		{716FDCF9-ADE7-95A3-1338-FA25EBCFFAC8} = {2999BE8A-2C03-4997-957A-66142629BCD5}
 		{D88970C5-E323-74AF-3F84-11BDC5D3767E} = {2999BE8A-2C03-4997-957A-66142629BCD5}
 		{11DB58FA-33AF-9889-10E1-F7E2F65C8BC5} = {2999BE8A-2C03-4997-957A-66142629BCD5}
-		{DD9EF0C0-4E41-EA1D-2B50-F31C8027AD7E} = {BCC7F15E-FC30-4273-A698-0CBF8F459016}
+		{267CC8B9-8FB5-B557-4A3E-4A0736E272EC} = {BCC7F15E-FC30-4273-A698-0CBF8F459016}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {08492C5F-0B0F-4434-9AAF-5ED0298B15BF}
