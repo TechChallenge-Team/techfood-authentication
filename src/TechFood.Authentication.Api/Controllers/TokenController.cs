@@ -30,12 +30,12 @@ public class TokenController(IMediator mediator) : ControllerBase
     {
         if (request.GrantType != "client_credentials")
         {
-            return BadRequest(new { error = "unsupported_grant_type", error_description = "Only 'client_credentials' grant type is supported" });
+            return BadRequest(new { error = "unsupported_grant_type", message = "Only 'client_credentials' grant type is supported" });
         }
 
         if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.ClientSecret))
         {
-            return BadRequest(new { error = "invalid_request", error_description = "client_id and client_secret are required" });
+            return BadRequest(new { error = "invalid_request", message = "client_id and client_secret are required" });
         }
 
         var command = new ClientCredentialsCommand(
@@ -46,12 +46,6 @@ public class TokenController(IMediator mediator) : ControllerBase
 
         var result = await _mediator.Send(command);
 
-        return Ok(new
-        {
-            access_token = result.AccessToken,
-            token_type = result.TokenType,
-            expires_in = result.ExpiresIn,
-            scope = result.Scope
-        });
+        return Ok(result);
     }
 }
