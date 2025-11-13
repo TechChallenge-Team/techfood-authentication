@@ -101,7 +101,7 @@ public class AuthContext(DbContextOptions<AuthContext> options) : TechFoodContex
                     ClientId = "order-service",
                     ClientSecretHash = "AQAAAAIAAYagAAAAEGc5qkWBdWL8/9BHGSyC24vz49eu41YPzSg0AaUFWNzA/qJgKZQy0dK+BiUDwo45qw==",
                     Name = "Order Service",
-                    Scopes = new[] { "orders.read", "orders.write", "users.read" },
+                    Scopes = new[] { "orders.read", "orders.write", "users.read", "products.read", "categories.read" },
                     IsActive = true,
                     CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     IsDeleted = false
@@ -137,7 +137,7 @@ public class AuthContext(DbContextOptions<AuthContext> options) : TechFoodContex
                     ClientId = "backoffice-service",
                     ClientSecretHash = "AQAAAAIAAYagAAAAEJlLak1GYPXjel9Lc9LhwpLilkyUvFhwBuxNL0g8sn6POZv3fD+XqHN0C90pJbE9vg==",
                     Name = "Backoffice",
-                    Scopes = new[] { "orders.read", "orders.write", "payments.read", "payments.write", "users.read", "users.write", "kitchen.read", "kitchen.write" },
+                    Scopes = new[] { "orders.read", "orders.write", "payments.read", "payments.write", "users.read", "users.write", "products.read", "products.write", "categories.read", "categories.write", "kitchen.read", "kitchen.write" },
                     IsActive = true,
                     CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     IsDeleted = false
