@@ -6,12 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Common\AutoMapper\**" />
-    <EmbeddedResource Remove="Common\AutoMapper\**" />
-    <None Remove="Common\AutoMapper\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   
@@ -22,12 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Common\Resources\Exceptions.Designer.cs">
+    <Compile Update="Resources\Exceptions.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Exceptions.resx</DependentUpon>
     </Compile>
-    <Compile Update="Common\Resources\Validators.Designer.cs">
+    <Compile Update="Resources\Validators.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Validators.resx</DependentUpon>
@@ -35,11 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Update="Common\Resources\Exceptions.resx">
+    <EmbeddedResource Update="Resources\Exceptions.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Exceptions.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Update="Common\Resources\Validators.resx">
+    <EmbeddedResource Update="Resources\Validators.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Validators.Designer.cs</LastGenOutput>
     </EmbeddedResource>
@@ -48,8 +42,7 @@
   <ItemGroup>
     <Folder Include="Events\" />
     <Folder Include="Queries\" />
-    <Folder Include="Common\Data\" />
-    <Folder Include="Common\Services\" />
+    <Folder Include="Services\" />
   </ItemGroup>
 
   <ItemGroup>

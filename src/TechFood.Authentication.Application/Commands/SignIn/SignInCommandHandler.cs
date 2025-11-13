@@ -29,7 +29,7 @@ public class SignInCommandHandler(
         var user = await repo.GetByUsernameOrEmailAsync(request.Username);
         if (user == null)
         {
-            throw new Common.Exceptions.ApplicationException(Common.Resources.Exceptions.Auth_InvalidUseOrPassword);
+            throw new Shared.Application.Exceptions.ApplicationException(Resources.Exceptions.Auth_InvalidUseOrPassword);
         }
 
         var validation = new PasswordHasher<User>();
@@ -37,7 +37,7 @@ public class SignInCommandHandler(
 
         if (isValid == PasswordVerificationResult.Failed)
         {
-            throw new Common.Exceptions.ApplicationException(Common.Resources.Exceptions.Auth_InvalidUseOrPassword);
+            throw new Shared.Application.Exceptions.ApplicationException(Resources.Exceptions.Auth_InvalidUseOrPassword);
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Authentication:Jwt:Key"]!));

@@ -30,7 +30,7 @@ public class ClientCredentialsCommandHandler(
         var client = await clientRepository.GetByClientIdAsync(request.ClientId);
         if (client == null || !client.IsActive)
         {
-            throw new Common.Exceptions.ApplicationException("Invalid client credentials");
+            throw new Shared.Application.Exceptions.ApplicationException("Invalid client credentials");
         }
 
         var passwordHasher = new PasswordHasher<ServiceClient>();
@@ -38,7 +38,7 @@ public class ClientCredentialsCommandHandler(
 
         if (isValid == PasswordVerificationResult.Failed)
         {
-            throw new Common.Exceptions.ApplicationException("Invalid client credentials");
+            throw new Shared.Application.Exceptions.ApplicationException("Invalid client credentials");
         }
 
         var requestedScopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
@@ -49,7 +49,7 @@ public class ClientCredentialsCommandHandler(
             var unauthorizedScopes = requestedScopes.Except(allowedScopes, StringComparer.OrdinalIgnoreCase).ToArray();
             if (unauthorizedScopes.Any())
             {
-                throw new Common.Exceptions.ApplicationException($"Unauthorized scopes: {string.Join(", ", unauthorizedScopes)}");
+                throw new Shared.Application.Exceptions.ApplicationException($"Unauthorized scopes: {string.Join(", ", unauthorizedScopes)}");
             }
         }
 

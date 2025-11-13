@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace TechFood.Authentication.Application.Common.Extensions;
+namespace TechFood.Authentication.Application.Extensions;
 
 public static class LinqExtensions
 {

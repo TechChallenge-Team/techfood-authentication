@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 
-namespace TechFood.Authentication.Application.Common.Extensions;
+namespace TechFood.Authentication.Application.Extensions;
 
 public static class ClaimsPrincipalExtensions
 {
