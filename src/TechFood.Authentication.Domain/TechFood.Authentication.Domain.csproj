@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="TechFood.Authentication.Application.Tests" />
+    <InternalsVisibleTo Include="TechFood.Authentication.Domain.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="TechFood.Shared.Domain" Version="0.2.2-rc" />
   </ItemGroup>
 

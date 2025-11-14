@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="TechFood.Authentication.Api.Tests" />
+    <InternalsVisibleTo Include="TechFood.Authentication.Integration.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TechFood.Authentication.Application\TechFood.Authentication.Application.csproj" />
     <ProjectReference Include="..\TechFood.Authentication.Contracts\TechFood.Authentication.Contracts.csproj" />
     <ProjectReference Include="..\TechFood.Authentication.Domain\TechFood.Authentication.Domain.csproj" />

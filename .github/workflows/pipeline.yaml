@@ -1,47 +1,134 @@
-# .github/workflows/deploy-lambda.yml
-
-name: Deploy .NET Lambda to AWS
-
 on:
   push:
     branches:
       - main
-      - "feature/*"
-  workflow_dispatch: {}
-
-env:
-  AWS_REGION: us-east-1
-  DOTNET_PROJECT_PATH: src/TechFood.Authentication/TechFood.Authentication.csproj
-  DOTNET_PROJECT_LOCATION: src/TechFood.Authentication
-  LAMBDA_HANDLER: "TechFood.Authentication"
-  OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
+      - develop
+  pull_request:
+    branches:
+      - "**"
 
 jobs:
-  build-and-deploy-lambda:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: windows-latest
+    env:
+      COVERAGE_PATH: "./TestResults/*/coverage.opencover.xml"
+      COVERAGE_EXCLUSIONS: "**/Program.cs,**/DependencyInjection.cs,**/RequestPipeline.cs,**/Resources/*.cs,**/Migrations/**/*.cs,**/Persistence/Contexts/**/*.cs,**/Persistence/Mappings/**/*.cs,**/Persistence/ValueObjectMappings/**/*.cs"
+      PROJECT_LOCATION: src/TechFood.Authentication
+      AWS_REGION: us-east-1
+      LAMBDA_HANDLER: "TechFood.Authentication"
+      OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: "8.0.x"
 
-      - name: Restore dependencies
-        run: dotnet restore ${{ env.DOTNET_PROJECT_PATH }}
+      - name: Set up JDK (required by SonarScanner)
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "zulu"
 
-      - name: Build project
-        run: dotnet build --configuration Release ${{ env.DOTNET_PROJECT_PATH }}
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~\sonar\cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache SonarCloud scanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+
+      - name: Install SonarCloud scanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory -Force
+          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
+
+      - name: Install ReportGenerator
+        run: dotnet tool update dotnet-reportgenerator-globaltool --tool-path ${{ runner.temp }}\reportgenerator
 
       - name: Install Amazon Lambda Tools
         run: |
-          dotnet tool install -g Amazon.Lambda.Tools
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          dotnet tool update Amazon.Lambda.Tools --tool-path ${{ runner.temp }}\awslambda
+
+      - name: Begin SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: powershell
+        run: |
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin `
+            /k:"TechChallenge-Team_techfood-order" `
+            /o:"techchallenge-team" `
+            /d:sonar.token="$env:SONAR_TOKEN" `
+            /d:sonar.qualitygate.wait=true `
+            /d:sonar.cs.opencover.reportsPaths="${{ env.COVERAGE_PATH }}" `
+            /d:sonar.coverage.exclusions="${{ env.COVERAGE_EXCLUSIONS }}"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Add GitHub Packages source
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget add source --username ${{ github.actor }} --password $GITHUB_TOKEN --store-password-in-clear-text --name github "https://nuget.pkg.github.com/TechChallenge-Team/index.json"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test 
+          --no-build 
+          --configuration Release 
+          --collect:"XPlat Code Coverage" 
+          --results-directory ./TestResults 
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="${{ env.COVERAGE_EXCLUSIONS }}"
+
+      - name: Generate coverage report
+        run: ${{ runner.temp }}\reportgenerator\reportgenerator -reports:${{ env.COVERAGE_PATH }} -targetdir:coverage-report -reporttypes:TextSummary
+
+      - name: Display coverage summary
+        run: Get-Content coverage-report/Summary.txt
+
+      - name: End SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: powershell
+        run: |
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Publish Lambda package
         run: |
-          dotnet lambda package --configuration Release --project-location ${{ env.DOTNET_PROJECT_LOCATION }} --output-package bin/Release/${{ env.OUTPUT_PACKAGE_NAME }}
+          dotnet lambda package --configuration Release --project-location ${{ env.PROJECT_LOCATION }} --output-package bin/Release/${{ env.OUTPUT_PACKAGE_NAME }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -74,6 +161,10 @@ jobs:
           aws s3 cp bin/Release/${{ env.OUTPUT_PACKAGE_NAME }} s3://$BUCKET_NAME/$KEY
 
       - name: Create or Update Lambda function
+        env:
+          RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
+          RDS_PASSWORD: ${{ secrets.RDS_PASSWORD }}
+          JWT_KEY: ${{ secrets.JWT_KEY }}
         run: |
           FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
           BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
@@ -95,8 +186,7 @@ jobs:
           set -e
 
           # Construir a connection string para SQL Server
-          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ secrets.RDS_USERNAME }};Password=${{ secrets.RDS_PASSWORD }};TrustServerCertificate=true;"
-          JWT_KEY="${{ secrets.JWT_KEY }}"
+          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=$RDS_USERNAME;Password=$RDS_PASSWORD;TrustServerCertificate=true;"
 
           if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
             echo "Function exists. Updating function code..."
@@ -113,7 +203,7 @@ jobs:
             echo "Updating function environment variables..."
             aws lambda update-function-configuration \
               --function-name "$FUNC_NAME" \
-              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Jwt__Key\":\"$JWT_KEY\"}}"
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Authentication__Jwt__Key\":\"$JWT_KEY\"}}"
           else
             echo "Function does not exist. Creating new function..."
             aws lambda create-function \
@@ -124,7 +214,7 @@ jobs:
               --code "S3Bucket=$BUCKET_NAME,S3Key=$KEY" \
               --timeout 30 \
               --memory-size 512 \
-              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Jwt__Key\":\"$JWT_KEY\"}}" \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Authentication__Jwt__Key\":\"$JWT_KEY\"}}" \
               --publish
           fi
 
@@ -133,16 +223,16 @@ jobs:
           FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
           API_GATEWAY_ID=$(jq -r '.api_gateway_id.value' outputs.json)
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          
+
           echo "Adding API Gateway permission to Lambda function..."
           echo "API Gateway ID: $API_GATEWAY_ID"
           echo "Function Name: $FUNC_NAME"
-          
+
           # Remove permissão existente se houver (ignora erro se não existir)
           aws lambda remove-permission \
             --function-name "$FUNC_NAME" \
             --statement-id "AllowAPIGatewayInvoke" 2>/dev/null || true
-          
+
           # Adiciona nova permissão
           aws lambda add-permission \
             --function-name "$FUNC_NAME" \
@@ -150,5 +240,5 @@ jobs:
             --action "lambda:InvokeFunction" \
             --principal "apigateway.amazonaws.com" \
             --source-arn "arn:aws:execute-api:${{ env.AWS_REGION }}:${AWS_ACCOUNT_ID}:${API_GATEWAY_ID}/*/*"
-          
+
           echo "Permission added successfully!"

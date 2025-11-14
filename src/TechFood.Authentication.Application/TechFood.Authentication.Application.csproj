@@ -46,6 +46,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="TechFood.Authentication.Application.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TechFood.Authentication.Domain\TechFood.Authentication.Domain.csproj" />
   </ItemGroup>
 

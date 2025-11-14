@@ -60,8 +60,8 @@ public class SignInCommandHandler(
             (int)_tokenExpiration.TotalSeconds,
             new(
                 user.Id,
-                user.Username,
                 user.Name.FullName,
+                user.Username,
                 user.Email?.Address,
                 user.Role)
             );
