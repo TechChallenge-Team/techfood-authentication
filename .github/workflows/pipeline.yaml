@@ -63,7 +63,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ${{ runner.temp }}/scanner/dotnet-sonarscanner begin \
-            /k:"TechChallenge-Team_techfood-order" \
+            /k:"TechChallenge-Team_techfood-authentication" \
             /o:"techchallenge-team" \
             /d:sonar.token="${{ env.SONAR_TOKEN }}" \
             /d:sonar.qualitygate.wait=true \
