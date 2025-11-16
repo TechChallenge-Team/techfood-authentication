@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     env:
       COVERAGE_PATH: "./TestResults/*/coverage.opencover.xml"
       COVERAGE_EXCLUSIONS: "**/Program.cs,**/DependencyInjection.cs,**/RequestPipeline.cs,**/Resources/*.cs,**/Migrations/**/*.cs,**/Persistence/Contexts/**/*.cs,**/Persistence/Mappings/**/*.cs,**/Persistence/ValueObjectMappings/**/*.cs"
@@ -37,7 +37,7 @@ jobs:
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
-          path: ~\sonar\cache
+          path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
@@ -45,35 +45,29 @@ jobs:
         id: cache-sonar-scanner
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}\scanner
+          path: ${{ runner.temp }}/scanner
           key: ${{ runner.os }}-sonar-scanner
           restore-keys: ${{ runner.os }}-sonar-scanner
 
       - name: Install SonarCloud scanner
         if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
-        shell: powershell
         run: |
-          New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory -Force
-          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
+          mkdir -p ${{ runner.temp }}/scanner
+          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}/scanner
 
       - name: Install ReportGenerator
-        run: dotnet tool update dotnet-reportgenerator-globaltool --tool-path ${{ runner.temp }}\reportgenerator
-
-      - name: Install Amazon Lambda Tools
-        run: |
-          dotnet tool update Amazon.Lambda.Tools --tool-path ${{ runner.temp }}\awslambda
+        run: dotnet tool update dotnet-reportgenerator-globaltool --tool-path ${{ runner.temp }}/reportgenerator
 
       - name: Begin SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin `
-            /k:"TechChallenge-Team_techfood-order" `
-            /o:"techchallenge-team" `
-            /d:sonar.token="$env:SONAR_TOKEN" `
-            /d:sonar.qualitygate.wait=true `
-            /d:sonar.cs.opencover.reportsPaths="${{ env.COVERAGE_PATH }}" `
+          ${{ runner.temp }}/scanner/dotnet-sonarscanner begin \
+            /k:"TechChallenge-Team_techfood-order" \
+            /o:"techchallenge-team" \
+            /d:sonar.token="${{ env.SONAR_TOKEN }}" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.cs.opencover.reportsPaths="${{ env.COVERAGE_PATH }}" \
             /d:sonar.coverage.exclusions="${{ env.COVERAGE_EXCLUSIONS }}"
 
       - name: Cache NuGet packages
@@ -87,7 +81,7 @@ jobs:
       - name: Add GitHub Packages source
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: dotnet nuget add source --username ${{ github.actor }} --password $env:GITHUB_TOKEN --store-password-in-clear-text --name github "https://nuget.pkg.github.com/TechChallenge-Team/index.json"
+        run: dotnet nuget add source --username ${{ github.actor }} --password ${{ env.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/TechChallenge-Team/index.json"
 
       - name: Restore dependencies
         run: dotnet restore
@@ -106,17 +100,16 @@ jobs:
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="${{ env.COVERAGE_EXCLUSIONS }}"
 
       - name: Generate coverage report
-        run: ${{ runner.temp }}\reportgenerator\reportgenerator -reports:${{ env.COVERAGE_PATH }} -targetdir:coverage-report -reporttypes:TextSummary
+        run: ${{ runner.temp }}/reportgenerator/reportgenerator -reports:${{ env.COVERAGE_PATH }} -targetdir:coverage-report -reporttypes:TextSummary
 
       - name: Display coverage summary
-        run: Get-Content coverage-report/Summary.txt
+        run: cat coverage-report/Summary.txt
 
       - name: End SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+          ${{ runner.temp }}/scanner/dotnet-sonarscanner end /d:sonar.token="${{ env.SONAR_TOKEN }}"
 
   publish:
     runs-on: ubuntu-latest
@@ -186,7 +179,7 @@ jobs:
           set -e
 
           # Construir a connection string para SQL Server
-          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=$RDS_USERNAME;Password=$RDS_PASSWORD;TrustServerCertificate=true;"
+          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ env.RDS_USERNAME }};Password=${{ env.RDS_PASSWORD }};TrustServerCertificate=true;"
 
           if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
             echo "Function exists. Updating function code..."
@@ -203,7 +196,7 @@ jobs:
             echo "Updating function environment variables..."
             aws lambda update-function-configuration \
               --function-name "$FUNC_NAME" \
-              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Authentication__Jwt__Key\":\"$JWT_KEY\"}}"
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Authentication__Jwt__Key\":\"${{ env.JWT_KEY }}\"}}"
           else
             echo "Function does not exist. Creating new function..."
             aws lambda create-function \
@@ -214,7 +207,7 @@ jobs:
               --code "S3Bucket=$BUCKET_NAME,S3Key=$KEY" \
               --timeout 30 \
               --memory-size 512 \
-              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Authentication__Jwt__Key\":\"$JWT_KEY\"}}" \
+              --environment "{\"Variables\":{\"ConnectionStrings__DataBaseConection\":\"$CONNECTION_STRING\",\"Authentication__Jwt__Key\":\"${{ env.JWT_KEY }}\"}}" \
               --publish
           fi
 
