@@ -17,7 +17,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="TechFood.Shared.Presentation" Version="0.2.2-rc" />
+    <PackageReference Include="TechFood.Shared.Presentation" Version="0.2.4-rc" />
   </ItemGroup>
 
   <ItemGroup>

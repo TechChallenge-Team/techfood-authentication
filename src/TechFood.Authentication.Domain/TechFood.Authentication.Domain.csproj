@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TechFood.Shared.Domain" Version="0.2.2-rc" />
+    <PackageReference Include="TechFood.Shared.Domain" Version="0.2.4-rc" />
   </ItemGroup>
 
   <ItemGroup>
