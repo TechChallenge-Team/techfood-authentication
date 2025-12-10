@@ -179,7 +179,7 @@ jobs:
           set -e
 
           # Construir a connection string para SQL Server
-          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood;User Id=${{ env.RDS_USERNAME }};Password=${{ env.RDS_PASSWORD }};TrustServerCertificate=true;"
+          CONNECTION_STRING="Server=$RDS_ENDPOINT;Database=techfood_auth;User Id=${{ env.RDS_USERNAME }};Password=${{ env.RDS_PASSWORD }};TrustServerCertificate=true;"
 
           if aws lambda get-function --function-name "$FUNC_NAME" > /dev/null 2>&1; then
             echo "Function exists. Updating function code..."
