@@ -157,7 +157,7 @@ jobs:
         env:
           RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
           RDS_PASSWORD: ${{ secrets.RDS_PASSWORD }}
-          JWT_KEY: ${{ secrets.AUTH_JWT_KEY }}
+          JWT_KEY: ${{ secrets.JWT_KEY }}
         run: |
           FUNC_NAME=${{ vars.AUTH_FUNCTION_NAME }}
           BUCKET_NAME=${{ steps.tf_outputs.outputs.bucket_name }}
