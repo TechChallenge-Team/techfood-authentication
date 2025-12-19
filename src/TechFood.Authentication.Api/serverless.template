@@ -8,7 +8,7 @@
     "AspNetCoreFunction": {
       "Type": "AWS::Serverless::Function",
       "Properties": {
-        "Handler": "TechFood.Authentication",
+        "Handler": "TechFood.Authentication.Api",
         "Runtime": "dotnet8",
         "CodeUri": "",
         "MemorySize": 512,
