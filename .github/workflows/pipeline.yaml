@@ -113,7 +113,7 @@ jobs:
     env:
       PROJECT_LOCATION: src/TechFood.Authentication.Api
       AWS_REGION: us-east-1
-      LAMBDA_HANDLER: "TechFood.Authentication"
+      LAMBDA_HANDLER: "TechFood.Authentication.Api"
       OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
 
     steps:
