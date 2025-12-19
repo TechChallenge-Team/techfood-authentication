@@ -111,7 +111,7 @@ jobs:
     needs: test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     env:
-      PROJECT_LOCATION: src/TechFood.Authentication
+      PROJECT_LOCATION: src/TechFood.Authentication.Api
       AWS_REGION: us-east-1
       LAMBDA_HANDLER: "TechFood.Authentication"
       OUTPUT_PACKAGE_NAME: TechFood.Authentication.zip
