@@ -123,7 +123,7 @@ public class AuthContext(DbContextOptions<AuthContext> options) : TechFoodContex
                 {
                     Id = new Guid("c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f"),
                     ClientId = "kitchen-service",
-                    ClientSecretHash = "AAQAAAAIAAYagAAAAEK0Ly9jwdR3uEE1dXSiXeN6Zqpnvz2XWdEKTcaoc+MBGSvoj31/sGh4wlH3WEggI5Q==",
+                    ClientSecretHash = "AQAAAAIAAYagAAAAENxQDaPMNdL7YhDY9bM7SSs1lWJM0EJfdbqvLBUT0w/Lec7RhsmE4bWUbtojlDbJLA==",
                     Name = "Kitchen Service",
                     Scopes = new[] { "kitchen.read", "kitchen.write", "orders.read", "users.read" },
                     IsActive = true,
